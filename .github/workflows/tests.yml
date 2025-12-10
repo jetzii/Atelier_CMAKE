@@ -1,134 +1,216 @@
-name: Automatisation des tests
+# .github/workflows/tests.yml
+
+name: Pipeline CI/CD - Industrialisation Finale
 
 on: push
 
 jobs:
-
+  # ----------------------------------------------------
+  # JOB 1 : COMPILATION ET VÉRIFICATION GLOBALE (Séquence 2)
+  # ----------------------------------------------------
   Compilation:
     runs-on: ubuntu-latest
     steps:
-      - name: Récupération du dépôt
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Installer CMake
+        run: sudo apt-get update && sudo apt-get install -y cmake
+
+      - name: Compilation du projet et CTest
         run: |
-          last_directory=$(basename ${{ runner.workspace }})
-          git clone https://github.com/${{ github.repository }}.git
-          cd ./$last_directory
           mkdir build
           cd build
           cmake ..
           make
-          make test
-
-
+          ctest # Lance les tests définis dans CMakeLists.txt (vérification initiale)
+  
+  # ----------------------------------------------------
+  # JOBS DE TESTS PARALLÈLES AVEC RAPPORTS (Séquence 5 + Artefacts)
+  # ----------------------------------------------------
+  
+  # Job 2: Test Addition avec Artefact
   Test_Add:
     runs-on: ubuntu-latest
-    needs: Compilation
+    needs: Compilation 
     steps:
-      - name: Checkout
+      - name: Checkout du code
         uses: actions/checkout@v4
-
-      - name: Build
+      - name: Build (pour s'assurer de l'exécutable)
         run: |
-          mkdir -p build
-          cd build
-          cmake ..
-          make
+          mkdir -p build; cd build; cmake ..; make
 
       - name: Run test "add" and capture report
         run: |
           cd build
           set -e
-          echo "== Test add 10 5 ==" > report.txt
-          ./src/calculator add 10 5 | tee -a report.txt
-          echo "Exit code: $?" >> report.txt
+          echo "== Rapport de test pour la fonction add ==" > report-add.txt
+          ./src/calculator add 10 5 | tee -a report-add.txt
+          echo "Exit code: $?" >> report-add.txt
 
       - name: Upload report as artifact
         uses: actions/upload-artifact@v4
         with:
           name: test-add-report
-          path: build/report.txt      # <-- le fichier à récupérer
-          retention-days: 14          # optionnel
+          path: build/report-add.txt
+          retention-days: 14
 
-      - name: Job summary (facultatif mais pratique)
+      - name: Job summary (résultat visible sur GitHub)
         run: |
           echo "### Résultat du test *add*" >> $GITHUB_STEP_SUMMARY
-          echo '' >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          cat build/report.txt >> $GITHUB_STEP_SUMMARY
+          cat build/report-add.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
 
-
+  # Job 3: Test Soustraction
   Test_Sub:
     runs-on: ubuntu-latest
-    needs: Compilation
+    needs: Compilation 
     steps:
-      - name: Test sub
+      - name: Checkout du code
+        uses: actions/checkout@v4
+      - name: Build (pour s'assurer de l'exécutable)
         run: |
-          last_directory=$(basename ${{ runner.workspace }})
-          git clone https://github.com/${{ github.repository }}.git
-          cd ./$last_directory
-          mkdir build
+          mkdir -p build; cd build; cmake ..; make
+      
+      - name: Run test "sub" and capture report
+        run: |
           cd build
-          cmake ..
-          make
-          ./src/calculator sub 10 3
+          set -e
+          echo "== Rapport de test pour la fonction sub ==" > report-sub.txt
+          # La commande originale était './src/calculator sub 10 5 | grep "5.000000"'
+          # On modifie pour capturer la sortie complète
+          ./src/calculator sub 10 5 | tee -a report-sub.txt
+          # Simulez une vérification ici si nécessaire, ou laissez la sortie brute
+          grep "5.000000" report-sub.txt
+          echo "Exit code: $?" >> report-sub.txt
 
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-sub-report
+          path: build/report-sub.txt
+          retention-days: 14
 
+      - name: Job summary (résultat visible sur GitHub)
+        run: |
+          echo "### Résultat du test *sub*" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat build/report-sub.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+  
+  # Job 4: Test Multiplication
   Test_Mul:
     runs-on: ubuntu-latest
-    needs: Compilation
+    needs: Compilation 
     steps:
-      - name: Test mul
+      - name: Checkout du code
+        uses: actions/checkout@v4
+      - name: Build (pour s'assurer de l'exécutable)
         run: |
-          last_directory=$(basename ${{ runner.workspace }})
-          git clone https://github.com/${{ github.repository }}.git
-          cd ./$last_directory
-          mkdir build
+          mkdir -p build; cd build; cmake ..; make
+
+      - name: Run test "mul" and capture report
+        run: |
           cd build
-          cmake ..
-          make
-          ./src/calculator mul 3 7
+          set -e
+          echo "== Rapport de test pour la fonction mul ==" > report-mul.txt
+          # On modifie pour capturer la sortie complète
+          ./src/calculator mul 5 5 | tee -a report-mul.txt
+          # Simulez une vérification ici si nécessaire
+          grep "25.000000" report-mul.txt
+          echo "Exit code: $?" >> report-mul.txt
 
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-mul-report
+          path: build/report-mul.txt
+          retention-days: 14
 
+      - name: Job summary (résultat visible sur GitHub)
+        run: |
+          echo "### Résultat du test *mul*" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat build/report-mul.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # Job 5: Test Division
   Test_Div:
     runs-on: ubuntu-latest
-    needs: Compilation
+    needs: Compilation 
     steps:
-      - name: Test div
+      - name: Checkout du code
+        uses: actions/checkout@v4
+      - name: Build (pour s'assurer de l'exécutable)
         run: |
-          last_directory=$(basename ${{ runner.workspace }})
-          git clone https://github.com/${{ github.repository }}.git
-          cd ./$last_directory
-          mkdir build
-          cd build
-          cmake ..
-          make
-          ./src/calculator div 10 2
+          mkdir -p build; cd build; cmake ..; make
 
-
-  Test_Car:
-    runs-on: ubuntu-latest
-    needs: Compilation
-    steps:
-      - name: Test car
+      - name: Run test "div" and capture report
         run: |
-          last_directory=$(basename ${{ runner.workspace }})
-          git clone https://github.com/${{ github.repository }}.git
-          cd ./$last_directory
-          mkdir build
           cd build
-          cmake ..
-          make
-          ./src/calculator car 5
+          set -e
+          echo "== Rapport de test pour la fonction div ==" > report-div.txt
+          # On modifie pour capturer la sortie complète
+          ./src/calculator div 1 5 | tee -a report-div.txt
+          # Simulez une vérification ici si nécessaire
+          grep "0.200000" report-div.txt
+          echo "Exit code: $?" >> report-div.txt
 
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-div-report
+          path: build/report-div.txt
+          retention-days: 14
 
-  Deployment:
+      - name: Job summary (résultat visible sur GitHub)
+        run: |
+          echo "### Résultat du test *div*" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat build/report-div.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # Job 6: Test Carré avec Artefact (Déjà conforme)
+  Test_Carre_Artifact:
     runs-on: ubuntu-latest
-    needs:
-      - Test_Add
-      - Test_Sub
-      - Test_Mul
-      - Test_Div
-      - Test_Car
+    needs: Compilation 
     steps:
-      - name: Déploiement
-        run: echo "Déploiement de la solution"
+      - name: Checkout du code
+        uses: actions/checkout@v4
+      - name: Build (pour s'assurer de l'exécutable)
+        run: |
+          mkdir -p build; cd build; cmake ..; make
+
+      - name: Run test "car" and capture report
+        run: |
+          cd build
+          set -e
+          echo "== Rapport de test pour la fonction car (Carré) ==" > report-car.txt
+          ./src/calculator car 5 | tee -a report-car.txt
+          echo "Exit code: $?" >> report-car.txt
+
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-car-report # Nom de l'artefact pour le rapport Carré
+          path: build/report-car.txt
+          retention-days: 14
+
+      - name: Job summary (résultat visible sur GitHub)
+        run: |
+          echo "### Résultat du test *car*" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat build/report-car.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # ----------------------------------------------------
+  # JOB FINAL : DÉPLOIEMENT (Séquence 5)
+  # ----------------------------------------------------
+  Deploy:
+    runs-on: ubuntu-latest
+    # Dépend de la réussite de TOUS les jobs de test.
+    needs: [Test_Add, Test_Sub, Test_Mul, Test_Div, Test_Carre_Artifact] 
+    steps:
+      - name: Déploiement de la solution
+        run: echo "🎉 Déploiement de la solution réussi !"
